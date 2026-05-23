@@ -5,6 +5,13 @@ type KnowledgeItem = {
   script?: string;
 };
 
+type QaItem = {
+  question: string;
+  aliases?: string[];
+  answer: string;
+  category: string;
+};
+
 const KNOWLEDGE_BASE: KnowledgeItem[] = [
   {
     title: "20/3 Rule",
@@ -92,6 +99,177 @@ const KNOWLEDGE_BASE: KnowledgeItem[] = [
   }
 ];
 
+const QA_BANK: QaItem[] = [
+  {
+    question: "What is the 20/3 rule?",
+    aliases: ["explain 20/3", "daily contacts", "daily proposals", "activity standard"],
+    category: "Daily Activity",
+    answer:
+      "Toyota of Portland's 20/3 rule means each salesperson should make 20 meaningful contacts and create 3 proposals each day. A meaningful contact should move the customer forward: appointment, follow-up, revived lead, proposal, or next step."
+  },
+  {
+    question: "What should I say when a customer asks for the best price?",
+    aliases: ["best price", "lowest price", "what is your best deal", "discount"],
+    category: "Objection Handling",
+    answer:
+      "Acknowledge the question, then make sure you are pricing the right vehicle and deal structure. Say: \"I will gladly help with pricing. To compare this the right way, are you looking at this exact trim and equipment, and do you have a trade or financing involved?\""
+  },
+  {
+    question: "How do I answer an out-the-door price request?",
+    aliases: ["out the door", "otd", "complete price", "tax and license"],
+    category: "Pricing",
+    answer:
+      "Do not guess. Explain that an accurate out-the-door figure depends on ZIP code, taxes, registration, vehicle, trade, and approved incentives. Say: \"I can help with a complete figure. To make it accurate, what ZIP code should I use, and will there be a trade?\""
+  },
+  {
+    question: "What should I say when a customer asks about monthly payment?",
+    aliases: ["payment", "monthly payment", "$500 a month", "apr", "rate"],
+    category: "Finance",
+    answer:
+      "Do not promise payment, APR, rate, or approval. Say: \"Payment depends on the vehicle, down payment, term, taxes, trade, and approved finance options. Are you trying to stay under a certain monthly range?\""
+  },
+  {
+    question: "What should I say when a customer has credit concerns?",
+    aliases: ["bad credit", "credit not perfect", "credit approval", "pre approval"],
+    category: "Finance",
+    answer:
+      "Stay calm and do not promise approval. Say: \"We work with customers in many different situations. The best step is to review the facts and see what options are available. Would you prefer to start that conversation when you arrive or complete a secure application ahead of time?\""
+  },
+  {
+    question: "How should I handle a trade value question over the phone?",
+    aliases: ["trade value", "what is my trade worth", "appraisal", "trade-in"],
+    category: "Trade",
+    answer:
+      "Do not promise trade value before appraisal. Say: \"I can give general guidance, but a real value depends on condition, mileage, equipment, and current market demand. The quickest accurate answer is a live appraisal. Can you bring it with you?\""
+  },
+  {
+    question: "What do I say about negative equity?",
+    aliases: ["negative equity", "upside down", "payoff more than value"],
+    category: "Trade",
+    answer:
+      "Do not guess or minimize it. Say: \"That is common. The best thing we can do is evaluate the trade accurately, confirm the payoff, and show you the real options. Guessing usually creates confusion.\""
+  },
+  {
+    question: "What makes a CRM note manager-ready?",
+    aliases: ["crm note", "manager ready note", "focus note", "bad note"],
+    category: "CRM",
+    answer:
+      "A manager-ready note includes lead source, customer need, vehicle, objection/question, next action, appointment status, and whether a manager was involved. It should be factual, concise, and useful to the next person."
+  },
+  {
+    question: "What should I put in a lead response note?",
+    aliases: ["lead note", "internet note", "website lead note", "follow-up note"],
+    category: "CRM",
+    answer:
+      "Use this structure: Lead source, vehicle, customer request, response sent/call made, appointment offered, customer reply, next task, and manager involvement if any."
+  },
+  {
+    question: "How fast should I respond to a lead?",
+    aliases: ["lead response time", "internet lead speed", "new lead timing"],
+    category: "Lead Handling",
+    answer:
+      "Respond as quickly as possible. The first response should acknowledge the request, reference the vehicle, ask one useful question, and offer two appointment times. Speed matters, but quality still matters."
+  },
+  {
+    question: "How should I greet a showroom customer?",
+    aliases: ["customer greeting", "meet and greet", "up greeting", "first impression"],
+    category: "Greeting",
+    answer:
+      "Use a confident, low-pressure greeting. Say: \"Welcome to Toyota of Portland, I am [Name]. What brought you in today?\" Then listen before jumping into inventory."
+  },
+  {
+    question: "How do I ask for the appointment?",
+    aliases: ["appointment", "set appointment", "two times", "come in today"],
+    category: "Appointment Setting",
+    answer:
+      "Offer two clear choices. Say: \"The vehicle sounds like a strong fit. I have 2:15 or 5:15 available today. Which works better for you?\""
+  },
+  {
+    question: "What do I say if the customer says they might stop by?",
+    aliases: ["might stop by", "come in whenever", "no appointment"],
+    category: "Appointment Setting",
+    answer:
+      "Keep it helpful, not pushy. Say: \"You are welcome to do that. The reason I recommend a time is so the vehicle and the right person are ready for you. What time do you think you will most likely arrive?\""
+  },
+  {
+    question: "When should I get a manager involved?",
+    aliases: ["manager to", "turnover", "manager introduction", "save deal"],
+    category: "Manager TO",
+    answer:
+      "Get a manager involved before the customer leaves emotionally or physically. Use a TO for price, payment, trade, timing, confidence, or any unresolved objection."
+  },
+  {
+    question: "What should I never promise a customer?",
+    aliases: ["compliance", "do not promise", "credit promise", "availability promise", "trade promise"],
+    category: "Compliance",
+    answer:
+      "Do not promise credit approval, exact APR, exact payment, trade value, incentives, or vehicle availability without proper verification. When in doubt, verify with the right manager or system."
+  },
+  {
+    question: "What are the texting and privacy basics?",
+    aliases: ["texting consent", "privacy", "pii", "customer information", "personal text"],
+    category: "Compliance",
+    answer:
+      "Protect customer information. Use approved CRM/store communication tools, follow consent rules, avoid sending private customer data through personal channels, and keep messages professional and factual."
+  },
+  {
+    question: "How do I explain Toyota Safety Sense?",
+    aliases: ["tss", "safety sense", "pre collision", "lane tracing", "adaptive cruise"],
+    category: "Product Knowledge",
+    answer:
+      "Explain Toyota Safety Sense as driver assistance in customer-benefit language. It can help support awareness, following distance, lane guidance, and collision mitigation, but the driver remains responsible and in control."
+  },
+  {
+    question: "How do I explain Toyota hybrid vehicles?",
+    aliases: ["hybrid", "electrified", "battery", "mpg", "plug in"],
+    category: "Product Knowledge",
+    answer:
+      "A Toyota hybrid automatically blends gas and electric power. A standard hybrid does not need to be plugged in; the customer drives it like a normal Toyota while the system manages efficiency."
+  },
+  {
+    question: "What should be covered during delivery?",
+    aliases: ["delivery", "toyota app", "connected services", "bluetooth", "toyotacare", "first service"],
+    category: "Delivery",
+    answer:
+      "Delivery should include key feature review, Toyota app/Connected Services, Bluetooth, ToyotaCare, first service appointment, registration/plates explanation, trade item check, and a clear follow-up expectation."
+  },
+  {
+    question: "What should I say when a customer says they need to think about it?",
+    aliases: ["need to think", "think about it", "not ready", "sleep on it"],
+    category: "Objection Handling",
+    answer:
+      "Acknowledge and isolate. Say: \"I understand. Usually when someone says that, there is one part they are still unsure about. Is it the vehicle, the numbers, or the timing?\""
+  },
+  {
+    question: "What should I say when a customer says another dealer is cheaper?",
+    aliases: ["another dealer cheaper", "dealer cheaper", "lower quote", "competitor"],
+    category: "Objection Handling",
+    answer:
+      "Do not attack the other dealer. Say: \"I am glad you are comparing carefully. Before you drive across town, let us make sure it is the same vehicle, equipment, and total structure. Do you have the stock number or quote?\""
+  },
+  {
+    question: "What should I say if a customer is just looking?",
+    aliases: ["just looking", "only looking", "not buying today"],
+    category: "Greeting",
+    answer:
+      "Keep it easy. Say: \"Perfect, most people start there. My job is just to help you narrow things down. What type of vehicle are you looking at?\""
+  },
+  {
+    question: "What should I say if a customer needs to talk to their spouse?",
+    aliases: ["talk to spouse", "wife", "husband", "partner decision"],
+    category: "Objection Handling",
+    answer:
+      "Respect it and create a next step. Say: \"Of course, that makes sense. Would it help if we scheduled a time when both of you can see it together?\""
+  },
+  {
+    question: "How do I handle a missed appointment?",
+    aliases: ["missed appointment", "no show", "reschedule"],
+    category: "Follow-Up",
+    answer:
+      "Stay helpful. Say: \"Hi [First Name], this is [Name] at Toyota of Portland. I had you scheduled for [Time] to see the [Vehicle] and wanted to make sure everything is okay. Would later today or tomorrow work better?\""
+  }
+];
+
 function scoreItem(query: string, item: KnowledgeItem) {
   const q = query.toLowerCase();
   const haystack = `${item.title} ${item.tags.join(" ")} ${item.body}`.toLowerCase();
@@ -101,6 +279,43 @@ function scoreItem(query: string, item: KnowledgeItem) {
     if (item.tags.some((tag) => tag.includes(token))) score += 3;
   }
   return score;
+}
+
+function scoreQa(query: string, item: QaItem) {
+  const q = query.toLowerCase().trim();
+  const haystack = `${item.question} ${(item.aliases || []).join(" ")} ${item.category} ${item.answer}`.toLowerCase();
+  let score = 0;
+  if (haystack.includes(q)) score += 25;
+  if (item.question.toLowerCase().includes(q) || q.includes(item.question.toLowerCase())) score += 30;
+  for (const alias of item.aliases || []) {
+    const cleanAlias = alias.toLowerCase();
+    if (q.includes(cleanAlias) || cleanAlias.includes(q)) score += 20;
+  }
+  for (const token of q.split(/[^a-z0-9/]+/).filter(Boolean)) {
+    if (haystack.includes(token)) score += token.length > 3 ? 3 : 1;
+  }
+  return score;
+}
+
+export function findQuickAnswer(query: string) {
+  const matches = QA_BANK
+    .map((item) => ({ ...item, score: scoreQa(query, item) }))
+    .filter((item) => item.score >= 8)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+
+  if (!matches.length) return "";
+  const [primary, ...related] = matches;
+  return `Fast Q&A Database: ${primary.question}
+
+Category:
+${primary.category}
+
+Answer:
+${primary.answer}
+
+Related quick answers:
+${related.map((item) => item.question).join("\n") || "No closely related Q&A found."}`;
 }
 
 export function searchTrainingMaterials(query: string) {
@@ -113,6 +328,9 @@ export function searchTrainingMaterials(query: string) {
 }
 
 export function fastTrainingAnswer(query: string) {
+  const quickAnswer = findQuickAnswer(query);
+  if (quickAnswer) return quickAnswer;
+
   const lower = query.toLowerCase();
   const results = searchTrainingMaterials(query);
   if (!results.length) return "";
