@@ -11,9 +11,102 @@ const STORE_PATH = process.env.AGENT_STORE_PATH
     : resolve(process.cwd(), "./data/agents.json");
 
 let memoryStore: AgentStore | null = null;
+let postgresReady = false;
 
 function now() {
   return new Date().toISOString();
+}
+
+function hasPostgres() {
+  return Boolean(process.env.POSTGRES_URL || process.env.POSTGRES_DATABASE_URL || process.env.AGENT_DATABASE_URL);
+}
+
+async function getSql() {
+  if (!hasPostgres()) return null;
+  try {
+    const mod = await import("@vercel/postgres");
+    return mod.sql;
+  } catch (error) {
+    console.warn("Jarvis Postgres storage unavailable; falling back to local store.", error);
+    return null;
+  }
+}
+
+async function ensurePostgres() {
+  if (postgresReady) return true;
+  const sql = await getSql();
+  if (!sql) return false;
+  await sql`
+    CREATE TABLE IF NOT EXISTS jarvis_agents (
+      id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS jarvis_agent_runs (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      result TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  postgresReady = true;
+  return true;
+}
+
+async function readPostgresStore(): Promise<AgentStore | null> {
+  if (!(await ensurePostgres())) return null;
+  const sql = await getSql();
+  if (!sql) return null;
+  const [agentsResult, runsResult] = await Promise.all([
+    sql`SELECT data FROM jarvis_agents ORDER BY updated_at DESC`,
+    sql`SELECT id, agent_id, prompt, result, created_at FROM jarvis_agent_runs ORDER BY created_at DESC LIMIT 500`
+  ]);
+
+  const agents = agentsResult.rows.map((row) => row.data as TrainingAgent);
+  const runs = runsResult.rows.map((row) => ({
+    id: String(row.id),
+    agentId: String(row.agent_id),
+    prompt: String(row.prompt),
+    result: String(row.result),
+    createdAt: new Date(row.created_at as string).toISOString()
+  }));
+
+  if (!agents.length) {
+    const seed = starterStore();
+    await writePostgresStore(seed);
+    return seed;
+  }
+
+  return { agents, runs };
+}
+
+async function writePostgresStore(store: AgentStore) {
+  if (!(await ensurePostgres())) return false;
+  const sql = await getSql();
+  if (!sql) return false;
+
+  for (const agent of store.agents) {
+    await sql`
+      INSERT INTO jarvis_agents (id, data, created_at, updated_at)
+      VALUES (${agent.id}, ${JSON.stringify(agent)}::jsonb, ${agent.createdAt}, ${agent.updatedAt})
+      ON CONFLICT (id)
+      DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at
+    `;
+  }
+
+  for (const run of store.runs.slice(0, 500)) {
+    await sql`
+      INSERT INTO jarvis_agent_runs (id, agent_id, prompt, result, created_at)
+      VALUES (${run.id}, ${run.agentId}, ${run.prompt}, ${run.result}, ${run.createdAt})
+      ON CONFLICT (id) DO NOTHING
+    `;
+  }
+
+  return true;
 }
 
 function starterStore(): AgentStore {
@@ -40,6 +133,9 @@ async function ensureStore() {
 }
 
 export async function readStore(): Promise<AgentStore> {
+  const pgStore = await readPostgresStore();
+  if (pgStore) return pgStore;
+
   await ensureStore();
   if (memoryStore) return memoryStore;
   try {
@@ -55,6 +151,11 @@ export async function readStore(): Promise<AgentStore> {
 }
 
 export async function writeStore(store: AgentStore) {
+  if (await writePostgresStore(store)) {
+    memoryStore = null;
+    return;
+  }
+
   try {
     await mkdir(dirname(STORE_PATH), { recursive: true });
     await writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
@@ -115,6 +216,11 @@ export async function deleteAgent(id: string) {
   store.agents = store.agents.filter((agent) => agent.id !== id);
   store.runs = store.runs.filter((run) => run.agentId !== id);
   await writeStore(store);
+  const sql = await getSql();
+  if (sql && (await ensurePostgres())) {
+    await sql`DELETE FROM jarvis_agents WHERE id = ${id}`;
+    await sql`DELETE FROM jarvis_agent_runs WHERE agent_id = ${id}`;
+  }
   return { deleted: store.agents.length !== before };
 }
 
