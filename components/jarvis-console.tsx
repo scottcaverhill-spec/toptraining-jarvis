@@ -30,6 +30,7 @@ type ChatMessage = {
 
 const STORAGE_KEY = "toptraining-jarvis-chat-v1";
 const ACTIVE_AGENT_KEY = "toptraining-jarvis-active-agent-v1";
+const LOCAL_AGENTS_KEY = "toptraining-jarvis-local-agents-v1";
 const API_BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const welcome: ChatMessage = {
@@ -58,6 +59,25 @@ function toAiMessages(messages: ChatMessage[]): JarvisMessage[] {
     .filter((message) => message.id !== "welcome")
     .slice(-16)
     .map((message) => ({ role: message.role, content: message.content }));
+}
+
+function mergeAgents(serverAgents: TrainingAgent[], localAgents: TrainingAgent[]) {
+  const byId = new Map<string, TrainingAgent>();
+  [...serverAgents, ...localAgents].forEach((agent) => byId.set(agent.id, agent));
+  return Array.from(byId.values());
+}
+
+function loadLocalAgents() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_AGENTS_KEY) || "[]");
+    return Array.isArray(parsed) ? (parsed as TrainingAgent[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalAgents(agents: TrainingAgent[]) {
+  localStorage.setItem(LOCAL_AGENTS_KEY, JSON.stringify(agents.slice(0, 100)));
 }
 
 export default function JarvisConsole() {
@@ -115,10 +135,17 @@ export default function JarvisConsole() {
       const response = await fetch(`${API_BASE}/api/agents`, { cache: "no-store" });
       if (!response.ok) throw new Error(await response.text());
       const data = await response.json();
-      setAgents(data.agents || []);
+      setAgents(mergeAgents(data.agents || [], loadLocalAgents()));
     } catch (error) {
       console.warn("Jarvis agent refresh failed", error);
+      setAgents(loadLocalAgents());
     }
+  }
+
+  function rememberLocalAgent(agent: TrainingAgent) {
+    const next = mergeAgents([agent], loadLocalAgents());
+    saveLocalAgents(next);
+    setAgents((current) => mergeAgents(current, next));
   }
 
   async function sendMessage(text = input, agentOverrideId = activeAgentId) {
@@ -142,7 +169,7 @@ export default function JarvisConsole() {
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: requestMessages, activeAgentId: agentOverrideId })
+        body: JSON.stringify({ messages: requestMessages, activeAgentId: agentOverrideId, activeAgent: responseAgent })
       });
 
       const contentType = response.headers.get("content-type") || "";
@@ -150,6 +177,7 @@ export default function JarvisConsole() {
 
       if (contentType.includes("application/json")) {
         const data = await response.json();
+        if (data.createdAgent) rememberLocalAgent(data.createdAgent);
         if (data.createdAgentId) setActiveAgentId(data.createdAgentId);
         const reply = data.reply || "Jarvis received an empty reply.";
         updateAssistantMessage(assistantId, reply);
@@ -225,6 +253,7 @@ export default function JarvisConsole() {
     const data = await response.json();
     setAgentGoal("");
     setAgentName("");
+    if (data.agent) rememberLocalAgent(data.agent);
     await refreshAgents();
     if (data.agent?.id) setActiveAgentId(data.agent.id);
   }
@@ -232,6 +261,8 @@ export default function JarvisConsole() {
   async function deleteAgent(id: string) {
     if (!confirm("Delete this Jarvis agent?")) return;
     await fetch(`${API_BASE}/api/agents/${id}`, { method: "DELETE" });
+    saveLocalAgents(loadLocalAgents().filter((agent) => agent.id !== id));
+    setAgents((current) => current.filter((agent) => agent.id !== id));
     if (activeAgentId === id) setActiveAgentId("");
     await refreshAgents();
   }
