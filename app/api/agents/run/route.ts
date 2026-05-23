@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { agentSystemPrompt, DEFAULT_MODEL } from "@/lib/jarvis";
 import { getAgent, recordAgentRun } from "@/lib/agent-store";
+import { createMastraAgentFromConfig } from "@/src/mastra";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -15,12 +13,10 @@ export async function POST(request: Request) {
   const agent = await getAgent(agentId);
   if (!agent) return NextResponse.json({ error: "Agent not found." }, { status: 404 });
 
-  const result = await generateText({
-    model: openai(DEFAULT_MODEL),
-    system: agentSystemPrompt(agent),
-    prompt
-  });
+  const mastraAgent = createMastraAgentFromConfig(agent);
+  const result = await mastraAgent.generate(prompt);
 
-  const run = await recordAgentRun(agent.id, prompt, result.text);
-  return NextResponse.json({ run, reply: result.text });
+  const reply = result.text || "";
+  const run = await recordAgentRun(agent.id, prompt, reply);
+  return NextResponse.json({ run, reply });
 }
