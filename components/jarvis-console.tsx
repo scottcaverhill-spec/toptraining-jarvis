@@ -361,6 +361,15 @@ export default function JarvisConsole() {
     setMessages([welcome]);
   }
 
+  function clearResponses() {
+    window.speechSynthesis?.cancel();
+    setLastError("");
+    setMessages((current) => {
+      const userMessages = current.filter((message) => message.role === "user");
+      return userMessages.length ? [welcome, ...userMessages] : [welcome];
+    });
+  }
+
   return (
     <main className="relative min-h-screen px-4 py-4 text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-[1600px] gap-4 xl:grid-cols-[330px_1fr_360px]">
@@ -430,6 +439,9 @@ export default function JarvisConsole() {
               <Button variant="outline" size="sm" onClick={clearChat}>
                 <Trash2 size={16} /> Clear Chat
               </Button>
+              <Button variant="ghost" size="sm" onClick={clearResponses}>
+                <Trash2 size={16} /> Clear Responses
+              </Button>
             </div>
           </div>
 
@@ -475,6 +487,9 @@ export default function JarvisConsole() {
               <span>Enter sends. Shift + Enter adds a line. Cmd/Ctrl + K focuses input.</span>
               <button className="font-bold text-slate-300 underline-offset-4 hover:text-toyota-cyan hover:underline" onClick={clearChat}>
                 Clear Chat
+              </button>
+              <button className="font-bold text-slate-300 underline-offset-4 hover:text-toyota-cyan hover:underline" onClick={clearResponses}>
+                Clear Responses
               </button>
               <span>Conversation stored in this browser.</span>
             </div>
@@ -546,6 +561,7 @@ export default function JarvisConsole() {
             </CardHeader>
             <CardContent className="grid gap-2">
               <Button variant="outline" onClick={exportConversation}><Download size={17} /> Export Conversation</Button>
+              <Button variant="outline" onClick={clearResponses}><Trash2 size={17} /> Clear Responses</Button>
               <Button variant="danger" onClick={clearChat}><Trash2 size={17} /> Clear Chat</Button>
             </CardContent>
           </Card>
