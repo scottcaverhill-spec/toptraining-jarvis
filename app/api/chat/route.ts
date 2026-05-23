@@ -43,15 +43,6 @@ async function maybeHandleLocalToolRequest(latest: string) {
     return formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions);
   }
 
-  if (/\bagent\b/i.test(latest)) {
-    const goal = latest
-      .replace(/^(i|we|a salesperson|salesperson|sales person)\s+(need|needs|want|wants|would like)\s+(an? )?/i, "")
-      .replace(/^(make|build|create|program|design|set up)\s+(an? )?/i, "")
-      .trim() || "a Toyota of Portland training task";
-    const agent = await createAgent({ goal });
-    return formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions);
-  }
-
   if (/gif|meme|funny|image|social post|caption|creative|graphic/i.test(latest)) {
     const goal = `Create dealership-safe creative asset support for: ${latest}`;
     const agent = await createAgent({
@@ -73,6 +64,17 @@ Funny GIF asset brief:
 
 Prompt for a future image/GIF tool:
 "Create a clean, funny dealership training GIF concept in Toyota red, black, white, and gray. Show a professional sales associate organizing internet leads into appointments. Friendly humor, no customer personal information, no mocking customers, polished corporate training style."`;
+  }
+
+  if (/\bagent\b/i.test(latest)) {
+    const goal = latest
+      .replace(/^(i|we|a salesperson|salesperson|sales person)\s+(need|needs|want|wants|would like)\s+(an? )?/i, "")
+      .replace(/^(make|build|create|program|design|set up)\s+(an? )?/i, "")
+      .replace(/^agent\s+(for|to|that)\s+/i, "")
+      .replace(/^an?\s+agent\s+(for|to|that)\s+/i, "")
+      .trim() || "a Toyota of Portland training task";
+    const agent = await createAgent({ goal });
+    return formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions);
   }
 
   if (/role.?play|roleplay|pretend.*customer/i.test(latest)) {
