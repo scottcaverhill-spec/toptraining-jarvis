@@ -43,6 +43,38 @@ async function maybeHandleLocalToolRequest(latest: string) {
     return formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions);
   }
 
+  if (/\bagent\b/i.test(latest)) {
+    const goal = latest
+      .replace(/^(i|we|a salesperson|salesperson|sales person)\s+(need|needs|want|wants|would like)\s+(an? )?/i, "")
+      .replace(/^(make|build|create|program|design|set up)\s+(an? )?/i, "")
+      .trim() || "a Toyota of Portland training task";
+    const agent = await createAgent({ goal });
+    return formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions);
+  }
+
+  if (/gif|meme|funny|image|social post|caption|creative|graphic/i.test(latest)) {
+    const goal = `Create dealership-safe creative asset support for: ${latest}`;
+    const agent = await createAgent({
+      name: "Funny GIF Builder Agent",
+      role: "Dealership-safe creative asset coach",
+      goal,
+      instructions:
+        "Build friendly, professional GIF concepts, meme captions, social posts, and creative briefs for dealership training. Keep humor clean, inclusive, customer-respectful, and Toyota of Portland appropriate."
+    });
+    return `${formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions)}
+
+Funny GIF asset brief:
+- Concept: A salesperson calmly turning a messy lead into a clean appointment.
+- Scene 1: Inbox chaos with the caption "When the lead says just send your best price..."
+- Scene 2: Salesperson asks one smart question and offers two appointment times.
+- Scene 3: Clean calendar appointment appears with the caption "Process beats panic."
+- Tone: Light, positive, dealership-safe.
+- Do not use real customer names, phone numbers, private lead details, or negative jokes about customers.
+
+Prompt for a future image/GIF tool:
+"Create a clean, funny dealership training GIF concept in Toyota red, black, white, and gray. Show a professional sales associate organizing internet leads into appointments. Friendly humor, no customer personal information, no mocking customers, polished corporate training style."`;
+  }
+
   if (/role.?play|roleplay|pretend.*customer/i.test(latest)) {
     const scenario = latest.replace(/start|role.?play|roleplay|with|customer/gi, " ").trim() || "common showroom objection";
     const roleplay = roleplayStarter(scenario);
@@ -132,6 +164,9 @@ export async function POST(request: Request) {
 
   const latest = normalizeMessages(messages).at(-1)?.content || "";
   const localToolContext = await maybeHandleLocalToolRequest(latest);
+  if (localToolContext.startsWith("Built inside the academy:")) {
+    return NextResponse.json({ reply: localToolContext });
+  }
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
