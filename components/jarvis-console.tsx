@@ -432,12 +432,12 @@ export default function JarvisConsole() {
               </p>
             </div>
             <div className="flex flex-col items-center gap-3">
+              <Button variant="danger" size="sm" onClick={clearChat}>
+                <Trash2 size={16} /> Reset Conversation
+              </Button>
               <div className="relative mx-auto h-32 w-32 sm:h-40 sm:w-40">
                 <div className={`orb absolute inset-0 rounded-full shadow-hud ${isListening || isSending ? "animate-pulse" : ""}`} />
               </div>
-              <Button variant="outline" size="sm" onClick={clearChat}>
-                <Trash2 size={16} /> Reset Conversation
-              </Button>
             </div>
           </div>
 
