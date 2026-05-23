@@ -101,9 +101,14 @@ export default function JarvisConsole() {
   }, [activeAgentId]);
 
   async function refreshAgents() {
-    const response = await fetch(`${API_BASE}/api/agents`, { cache: "no-store" });
-    const data = await response.json();
-    setAgents(data.agents || []);
+    try {
+      const response = await fetch(`${API_BASE}/api/agents`, { cache: "no-store" });
+      if (!response.ok) throw new Error(await response.text());
+      const data = await response.json();
+      setAgents(data.agents || []);
+    } catch (error) {
+      console.warn("Jarvis agent refresh failed", error);
+    }
   }
 
   async function sendMessage(text = input) {
@@ -138,7 +143,7 @@ export default function JarvisConsole() {
       } else {
         await readStream(response, assistantId);
       }
-      await refreshAgents();
+      void refreshAgents();
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Request failed";
       setLastError(detail);
