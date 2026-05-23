@@ -38,7 +38,7 @@ async function maybeHandleLocalToolRequest(latest: string) {
   if (/role.?play|roleplay|pretend.*customer/i.test(latest)) {
     const scenario = latest.replace(/start|role.?play|roleplay|with|customer/gi, " ").trim() || "common showroom objection";
     const roleplay = roleplayStarter(scenario);
-    return `${roleplay.opening}\\n\\nCoach note: ${roleplay.coachNote}`;
+    return `Scenario: ${roleplay.scenario}\\nCustomer: "${roleplay.customerLine}"\\nCoach target: ${roleplay.coachingTarget}`;
   }
 
   if (/script|voicemail|text message|email/i.test(latest)) {
