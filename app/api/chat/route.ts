@@ -128,10 +128,10 @@ Pass standard:
 The employee must stay customer-centered, ask at least one useful discovery question, avoid promises on credit/payment/trade/availability, and set a clear next step.
 
 What works now:
-I can define the agent, add it to the Jarvis agent list, generate scripts, run role-play, and create scoring guidance inside the academy.
+This agent is created now inside Jarvis. I can define the agent, add it to the Jarvis agent list, generate scripts, run role-play, create scoring guidance, and build usable training workflows inside the academy.
 
-What needs outside access later:
-Direct CRM automation, texting, call logging, or live lead routing requires approved Focus/Reynolds, phone, or dealership API access.`;
+Outside-system automation:
+The agent exists now. If you later want it to push records into Focus/Reynolds, send texts, log calls, pull Google data, or route live leads automatically, that connection needs approved account/API access. Until then, the agent still works as a training, scripting, coaching, role-play, and workflow builder.`;
 }
 
 export async function POST(request: Request) {
