@@ -2,16 +2,16 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createAgent, getAgent, listAgents } from "@/lib/agent-store";
 import { agentSystemPrompt, buildAgentInstructions, DEFAULT_MODEL } from "@/lib/jarvis";
-import { generateSalesScript, roleplayStarter, searchTrainingMaterials } from "@/lib/training-tools";
+import { fastTrainingAnswer, generateSalesScript, roleplayStarter, searchTrainingMaterials } from "@/lib/training-tools";
 import type { CoreMessage } from "ai";
 import type { TrainingAgent } from "@/lib/types";
 
 export const maxDuration = 60;
-const REQUEST_TIMEOUT_MS = 25000;
+const REQUEST_TIMEOUT_MS = 12000;
 
 function normalizeMessages(messages: CoreMessage[]) {
   return messages
-    .slice(-16)
+    .slice(-8)
     .map((message) => {
       const content = typeof message.content === "string" ? message.content : JSON.stringify(message.content);
       return {
@@ -105,6 +105,15 @@ Prompt for a future image/GIF tool:
     if (results.length) {
       return { reply: `I found these training references:\n${results.map((item) => `- ${item.title}: ${item.body}`).join("\n")}` };
     }
+  }
+
+  if (
+    /20\/3|lead|internet|phone|appointment|price|payment|trade|crm|note|compliance|privacy|texting|credit|delivery|toyota safety|hybrid|manager to|objection/i.test(
+      latest
+    )
+  ) {
+    const answer = fastTrainingAnswer(latest);
+    if (answer) return { reply: answer };
   }
 
   return null;
@@ -202,7 +211,7 @@ export async function POST(request: Request) {
 
   const latest = normalizeMessages(messages).at(-1)?.content || "";
   const localToolContext = await maybeHandleLocalToolRequest(latest);
-  if (localToolContext?.reply.startsWith("Built inside the academy:")) {
+  if (localToolContext?.reply) {
     return NextResponse.json({
       reply: localToolContext.reply,
       createdAgentId: localToolContext.createdAgentId,
