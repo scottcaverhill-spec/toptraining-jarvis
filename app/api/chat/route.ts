@@ -6,6 +6,7 @@ import { generateSalesScript, roleplayStarter, searchTrainingMaterials } from "@
 import type { CoreMessage } from "ai";
 
 export const maxDuration = 60;
+const REQUEST_TIMEOUT_MS = 25000;
 
 function normalizeMessages(messages: CoreMessage[]) {
   return messages
@@ -86,6 +87,8 @@ export async function POST(request: Request) {
   const latest = normalizeMessages(messages).at(-1)?.content || "";
   const localToolContext = await maybeHandleLocalToolRequest(latest);
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
     const response = await client.responses.create({
@@ -100,6 +103,8 @@ ${localToolContext || "No local tool context was needed for this request."}`
         },
         ...normalizeMessages(messages)
       ] as any
+    }, {
+      signal: controller.signal
     });
 
     return NextResponse.json({ reply: response.output_text || "Jarvis did not return text for that request." });
@@ -113,5 +118,7 @@ ${localToolContext || "No local tool context was needed for this request."}`
       },
       { status: 502 }
     );
+  } finally {
+    clearTimeout(timeout);
   }
 }
