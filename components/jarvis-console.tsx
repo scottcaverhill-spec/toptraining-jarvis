@@ -380,10 +380,10 @@ export default function JarvisConsole() {
               <div className="flex items-center justify-between gap-3">
                 <Badge>Jarvis Online</Badge>
                 <a href="https://toptrainingacademy.com/" className="inline-flex items-center gap-1 text-sm font-bold text-slate-300 hover:text-toyota-cyan">
-                  <ChevronLeft size={16} /> TOP Training Academy
+                  <ChevronLeft size={16} /> Toyota of Portland Training Academy
                 </a>
               </div>
-              <CardTitle className="text-3xl">TOP Jarvis</CardTitle>
+              <CardTitle className="text-3xl">Toyota of Portland Jarvis</CardTitle>
               <p className="text-sm leading-6 text-slate-400">
                 AI sales coach, agent dispatcher, role-play partner, product explainer, and CRM note critic.
               </p>
