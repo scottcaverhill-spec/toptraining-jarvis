@@ -5,12 +5,13 @@ import { z } from "zod";
 import { createAgent, deleteAgent, getAgent, listAgents } from "@/lib/agent-store";
 import { agentSystemPrompt, DEFAULT_MODEL } from "@/lib/jarvis";
 import { generateSalesScript, roleplayStarter, searchTrainingMaterials } from "@/lib/training-tools";
+import type { CoreMessage } from "ai";
 
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
-  const messages = Array.isArray(body?.messages) ? body.messages : [];
+  const messages: CoreMessage[] = Array.isArray(body?.messages) ? body.messages : [];
   const activeAgentId = body?.activeAgentId ? String(body.activeAgentId) : undefined;
   const activeAgent = await getAgent(activeAgentId);
 
