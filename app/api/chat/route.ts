@@ -1,13 +1,59 @@
 import { NextResponse } from "next/server";
-import { streamText, tool } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { z } from "zod";
-import { createAgent, deleteAgent, getAgent, listAgents } from "@/lib/agent-store";
+import OpenAI from "openai";
+import { createAgent, getAgent, listAgents } from "@/lib/agent-store";
 import { agentSystemPrompt, DEFAULT_MODEL } from "@/lib/jarvis";
 import { generateSalesScript, roleplayStarter, searchTrainingMaterials } from "@/lib/training-tools";
 import type { CoreMessage } from "ai";
 
 export const maxDuration = 60;
+
+function normalizeMessages(messages: CoreMessage[]) {
+  return messages
+    .slice(-16)
+    .map((message) => {
+      const content = typeof message.content === "string" ? message.content : JSON.stringify(message.content);
+      return {
+        role: message.role === "assistant" ? "assistant" : "user",
+        content
+      };
+    })
+    .filter((message) => message.content.trim());
+}
+
+async function maybeHandleLocalToolRequest(latest: string) {
+  const text = latest.toLowerCase();
+
+  if (/^\\s*(list|show).*agents?/.test(text)) {
+    return `Available Jarvis agents:\\n${(await listAgents())
+      .map((agent) => `- ${agent.name}: ${agent.goal}`)
+      .join("\\n")}`;
+  }
+
+  const createMatch = latest.match(/create (?:an? )?(?:specialized )?(?:ai )?agent (?:for|to|that)\\s+(.+)/i);
+  if (createMatch?.[1]) {
+    const agent = await createAgent({ goal: createMatch[1].trim() });
+    return `Agent created: ${agent.name}.\\nRole: ${agent.role}\\nGoal: ${agent.goal}`;
+  }
+
+  if (/role.?play|roleplay|pretend.*customer/i.test(latest)) {
+    const scenario = latest.replace(/start|role.?play|roleplay|with|customer/gi, " ").trim() || "common showroom objection";
+    const roleplay = roleplayStarter(scenario);
+    return `${roleplay.opening}\\n\\nCoach note: ${roleplay.coachNote}`;
+  }
+
+  if (/script|voicemail|text message|email/i.test(latest)) {
+    return generateSalesScript(latest);
+  }
+
+  if (/search|training material|training guide|policy|crm|toyota|objection|delivery/i.test(latest)) {
+    const results = searchTrainingMaterials(latest);
+    if (results.length) {
+      return `I found these training references:\\n${results.map((item) => `- ${item.title}: ${item.body}`).join("\\n")}`;
+    }
+  }
+
+  return "";
+}
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -37,50 +83,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "OPENAI_API_KEY is not configured on the server." }, { status: 500 });
   }
 
-  const result = streamText({
-    model: openai(DEFAULT_MODEL),
-    system: agentSystemPrompt(activeAgent || undefined),
-    messages,
-    tools: {
-      createTrainingAgent: tool({
-        description: "Create a specialized Toyota of Portland Training Academy AI agent.",
-        parameters: z.object({
-          goal: z.string().describe("The training problem this agent should solve."),
-          name: z.string().optional().describe("Short agent name."),
-          role: z.string().optional().describe("The agent's specialist role.")
-        }),
-        execute: async ({ goal, name, role }) => {
-          const agent = await createAgent({ goal, name, role });
-          return { created: true, agent };
-        }
-      }),
-      listTrainingAgents: tool({
-        description: "List available specialized training agents.",
-        parameters: z.object({}),
-        execute: async () => ({ agents: await listAgents() })
-      }),
-      deleteTrainingAgent: tool({
-        description: "Delete a specialized training agent by ID.",
-        parameters: z.object({ agentId: z.string() }),
-        execute: async ({ agentId }) => deleteAgent(agentId)
-      }),
-      searchTrainingMaterials: tool({
-        description: "Search known Toyota of Portland training snippets. Future RAG/vector store plugs in here.",
-        parameters: z.object({ query: z.string() }),
-        execute: async ({ query }) => ({ results: searchTrainingMaterials(query) })
-      }),
-      generateSalesScript: tool({
-        description: "Generate a short dealership-ready script for a sales situation.",
-        parameters: z.object({ topic: z.string() }),
-        execute: async ({ topic }) => ({ script: generateSalesScript(topic) })
-      }),
-      startRoleplay: tool({
-        description: "Start a realistic customer role-play scenario.",
-        parameters: z.object({ scenario: z.string() }),
-        execute: async ({ scenario }) => roleplayStarter(scenario)
-      })
-    }
-  });
+  const latest = normalizeMessages(messages).at(-1)?.content || "";
+  const localToolContext = await maybeHandleLocalToolRequest(latest);
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  return result.toDataStreamResponse();
+  try {
+    const response = await client.responses.create({
+      model: DEFAULT_MODEL,
+      input: [
+        {
+          role: "system",
+          content: `${agentSystemPrompt(activeAgent || undefined)}
+
+Local training tool context:
+${localToolContext || "No local tool context was needed for this request."}`
+        },
+        ...normalizeMessages(messages)
+      ]
+    });
+
+    return NextResponse.json({ reply: response.output_text || "Jarvis did not return text for that request." });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "OpenAI request failed.";
+    console.error("Jarvis OpenAI request failed:", message);
+    return NextResponse.json(
+      {
+        error: "Jarvis could not complete the OpenAI request.",
+        detail: message
+      },
+      { status: 502 }
+    );
+  }
 }
