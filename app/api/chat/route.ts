@@ -21,26 +21,33 @@ function normalizeMessages(messages: CoreMessage[]) {
     .filter((message) => message.content.trim());
 }
 
-async function maybeHandleLocalToolRequest(latest: string) {
+type LocalToolResult = {
+  reply: string;
+  createdAgentId?: string;
+};
+
+async function maybeHandleLocalToolRequest(latest: string): Promise<LocalToolResult | null> {
   const text = latest.toLowerCase();
 
-  if (/^\\s*(list|show).*agents?/.test(text)) {
-    return `Available Jarvis agents:\\n${(await listAgents())
+  if (/^\s*(list|show).*agents?/.test(text)) {
+    return {
+      reply: `Available Jarvis agents:\n${(await listAgents())
       .map((agent) => `- ${agent.name}: ${agent.goal}`)
-      .join("\\n")}`;
+      .join("\n")}`
+    };
   }
 
-  const createMatch = latest.match(/create (?:an? )?(?:specialized )?(?:ai )?agent (?:for|to|that)\\s+(.+)/i);
+  const createMatch = latest.match(/create (?:an? )?(?:specialized )?(?:ai )?agent (?:for|to|that)\s+(.+)/i);
   if (createMatch?.[1]) {
     const agent = await createAgent({ goal: createMatch[1].trim() });
-    return formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions);
+    return { reply: formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions), createdAgentId: agent.id };
   }
 
-  const buildMatch = latest.match(/(?:build|program|design|make|set up|outline) (?:an? )?(?:specialized )?(?:ai )?agent (?:for|to|that)?\\s*(.+)?/i);
+  const buildMatch = latest.match(/(?:build|program|design|make|set up|outline) (?:an? )?(?:specialized )?(?:ai )?agent (?:for|to|that)?\s*(.+)?/i);
   if (buildMatch) {
     const goal = (buildMatch[1] || "a Toyota of Portland sales training task").trim();
     const agent = await createAgent({ goal });
-    return formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions);
+    return { reply: formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions), createdAgentId: agent.id };
   }
 
   if (/gif|meme|funny|image|social post|caption|creative|graphic/i.test(latest)) {
@@ -52,7 +59,9 @@ async function maybeHandleLocalToolRequest(latest: string) {
       instructions:
         "Build friendly, professional GIF concepts, meme captions, social posts, and creative briefs for dealership training. Keep humor clean, inclusive, customer-respectful, and Toyota of Portland appropriate."
     });
-    return `${formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions)}
+    return {
+      createdAgentId: agent.id,
+      reply: `${formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions)}
 
 Funny GIF asset brief:
 - Concept: A salesperson calmly turning a messy lead into a clean appointment.
@@ -63,7 +72,8 @@ Funny GIF asset brief:
 - Do not use real customer names, phone numbers, private lead details, or negative jokes about customers.
 
 Prompt for a future image/GIF tool:
-"Create a clean, funny dealership training GIF concept in Toyota red, black, white, and gray. Show a professional sales associate organizing internet leads into appointments. Friendly humor, no customer personal information, no mocking customers, polished corporate training style."`;
+"Create a clean, funny dealership training GIF concept in Toyota red, black, white, and gray. Show a professional sales associate organizing internet leads into appointments. Friendly humor, no customer personal information, no mocking customers, polished corporate training style."`
+    };
   }
 
   if (/\bagent\b/i.test(latest)) {
@@ -74,31 +84,34 @@ Prompt for a future image/GIF tool:
       .replace(/^an?\s+agent\s+(for|to|that)\s+/i, "")
       .trim() || "a Toyota of Portland training task";
     const agent = await createAgent({ goal });
-    return formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions);
+    return { reply: formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions), createdAgentId: agent.id };
   }
 
   if (/role.?play|roleplay|pretend.*customer/i.test(latest)) {
     const scenario = latest.replace(/start|role.?play|roleplay|with|customer/gi, " ").trim() || "common showroom objection";
     const roleplay = roleplayStarter(scenario);
-    return `Scenario: ${roleplay.scenario}\\nCustomer: "${roleplay.customerLine}"\\nCoach target: ${roleplay.coachingTarget}`;
+    return { reply: `Scenario: ${roleplay.scenario}\nCustomer: "${roleplay.customerLine}"\nCoach target: ${roleplay.coachingTarget}` };
   }
 
   if (/script|voicemail|text message|email/i.test(latest)) {
-    return generateSalesScript(latest);
+    return { reply: generateSalesScript(latest) };
   }
 
   if (/search|training material|training guide|policy|crm|toyota|objection|delivery/i.test(latest)) {
     const results = searchTrainingMaterials(latest);
     if (results.length) {
-      return `I found these training references:\\n${results.map((item) => `- ${item.title}: ${item.body}`).join("\\n")}`;
+      return { reply: `I found these training references:\n${results.map((item) => `- ${item.title}: ${item.body}`).join("\n")}` };
     }
   }
 
-  return "";
+  return null;
 }
 
 function formatAgentBuild(name: string, role: string, goal: string, instructions: string) {
   return `Built inside the academy: ${name}
+
+Status:
+Saved and active. Use the Agent Dashboard to trigger this specialist, or keep chatting and Jarvis will route the work through it.
 
 Role:
 ${role}
@@ -106,7 +119,7 @@ ${role}
 Goal:
 ${goal}
 
-System prompt:
+Operating instructions:
 ${instructions || buildAgentInstructions(goal)}
 
 Tools this agent should use:
@@ -130,7 +143,7 @@ Pass standard:
 The employee must stay customer-centered, ask at least one useful discovery question, avoid promises on credit/payment/trade/availability, and set a clear next step.
 
 What works now:
-This agent is created now inside Jarvis. I can define the agent, add it to the Jarvis agent list, generate scripts, run role-play, create scoring guidance, and build usable training workflows inside the academy.
+This is now a saved Jarvis agent. It appears in the Agent Dashboard, can be selected as the active specialist, and will answer using these instructions when you trigger it or keep chatting with it active.
 
 Outside-system automation:
 The agent exists now. If you later want it to push records into Focus/Reynolds, send texts, log calls, pull Google data, or route live leads automatically, that connection needs approved account/API access. Until then, the agent still works as a training, scripting, coaching, role-play, and workflow builder.`;
@@ -166,8 +179,11 @@ export async function POST(request: Request) {
 
   const latest = normalizeMessages(messages).at(-1)?.content || "";
   const localToolContext = await maybeHandleLocalToolRequest(latest);
-  if (localToolContext.startsWith("Built inside the academy:")) {
-    return NextResponse.json({ reply: localToolContext });
+  if (localToolContext?.reply.startsWith("Built inside the academy:")) {
+    return NextResponse.json({
+      reply: localToolContext.reply,
+      createdAgentId: localToolContext.createdAgentId
+    });
   }
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const controller = new AbortController();
@@ -182,7 +198,7 @@ export async function POST(request: Request) {
           content: `${agentSystemPrompt(activeAgent || undefined)}
 
 Local training tool context:
-${localToolContext || "No local tool context was needed for this request."}`
+${localToolContext?.reply || "No local tool context was needed for this request."}`
         },
         ...normalizeMessages(messages)
       ] as any
@@ -194,9 +210,10 @@ ${localToolContext || "No local tool context was needed for this request."}`
   } catch (error) {
     const message = error instanceof Error ? error.message : "OpenAI request failed.";
     console.error("Jarvis OpenAI request failed:", message);
-    if (localToolContext) {
+    if (localToolContext?.reply) {
       return NextResponse.json({
-        reply: `${localToolContext}\n\nNote: OpenAI was temporarily unavailable, so I used the built-in training tools for this response.`
+        reply: `${localToolContext.reply}\n\nNote: OpenAI was temporarily unavailable, so I used the built-in training tools for this response.`,
+        createdAgentId: localToolContext.createdAgentId
       });
     }
     return NextResponse.json({
