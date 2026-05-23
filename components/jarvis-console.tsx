@@ -121,10 +121,11 @@ export default function JarvisConsole() {
     }
   }
 
-  async function sendMessage(text = input) {
+  async function sendMessage(text = input, agentOverrideId = activeAgentId) {
     const clean = text.trim();
     if (!clean || isSending) return;
 
+    const responseAgent = agents.find((agent) => agent.id === agentOverrideId) || activeAgent;
     setInput("");
     setLastError("");
     setIsSending(true);
@@ -133,7 +134,7 @@ export default function JarvisConsole() {
     setMessages((current) => [
       ...current,
       userMessage,
-      { id: assistantId, role: "assistant", agentName: activeAgent?.name || "Jarvis", content: "" }
+      { id: assistantId, role: "assistant", agentName: responseAgent?.name || "Jarvis", content: "" }
     ]);
 
     try {
@@ -141,7 +142,7 @@ export default function JarvisConsole() {
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: requestMessages, activeAgentId })
+        body: JSON.stringify({ messages: requestMessages, activeAgentId: agentOverrideId })
       });
 
       const contentType = response.headers.get("content-type") || "";
@@ -149,6 +150,7 @@ export default function JarvisConsole() {
 
       if (contentType.includes("application/json")) {
         const data = await response.json();
+        if (data.createdAgentId) setActiveAgentId(data.createdAgentId);
         const reply = data.reply || "Jarvis received an empty reply.";
         updateAssistantMessage(assistantId, reply);
         speakText(reply, voiceEnabled);
@@ -167,6 +169,14 @@ export default function JarvisConsole() {
     } finally {
       setIsSending(false);
     }
+  }
+
+  async function triggerAgent(agent: TrainingAgent) {
+    setActiveAgentId(agent.id);
+    await sendMessage(
+      `Activate ${agent.name}. Introduce yourself as this specialist, explain what you can do in one short paragraph, and ask me for the first detail you need.`,
+      agent.id
+    );
   }
 
   async function readStream(response: Response, messageId: string) {
@@ -491,7 +501,7 @@ export default function JarvisConsole() {
                       </span>
                     ))}
                   </div>
-                  <Button className="mt-3 w-full" variant="ghost" size="sm" onClick={() => void sendMessage(`Use ${agent.name} to help me with: `)}>
+                  <Button className="mt-3 w-full" variant="ghost" size="sm" onClick={() => void triggerAgent(agent)}>
                     Trigger Agent
                   </Button>
                 </div>
