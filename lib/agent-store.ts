@@ -4,7 +4,13 @@ import { randomUUID } from "node:crypto";
 import { buildAgentInstructions, inferTools, STARTER_AGENTS } from "./jarvis";
 import type { AgentRun, AgentStore, TrainingAgent } from "./types";
 
-const STORE_PATH = resolve(process.cwd(), process.env.AGENT_STORE_PATH || "./data/agents.json");
+const STORE_PATH = process.env.AGENT_STORE_PATH
+  ? resolve(process.env.AGENT_STORE_PATH)
+  : process.env.VERCEL
+    ? "/tmp/toptraining-jarvis-agents.json"
+    : resolve(process.cwd(), "./data/agents.json");
+
+let memoryStore: AgentStore | null = null;
 
 function now() {
   return new Date().toISOString();
@@ -24,8 +30,9 @@ function starterStore(): AgentStore {
 }
 
 async function ensureStore() {
-  await mkdir(dirname(STORE_PATH), { recursive: true });
+  if (memoryStore) return;
   try {
+    await mkdir(dirname(STORE_PATH), { recursive: true });
     await readFile(STORE_PATH, "utf8");
   } catch {
     await writeStore(starterStore());
@@ -34,6 +41,7 @@ async function ensureStore() {
 
 export async function readStore(): Promise<AgentStore> {
   await ensureStore();
+  if (memoryStore) return memoryStore;
   try {
     const raw = await readFile(STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as AgentStore;
@@ -47,8 +55,13 @@ export async function readStore(): Promise<AgentStore> {
 }
 
 export async function writeStore(store: AgentStore) {
-  await mkdir(dirname(STORE_PATH), { recursive: true });
-  await writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+  try {
+    await mkdir(dirname(STORE_PATH), { recursive: true });
+    await writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+    memoryStore = null;
+  } catch {
+    memoryStore = store;
+  }
 }
 
 export async function listAgents() {
