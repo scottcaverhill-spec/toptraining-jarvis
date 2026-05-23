@@ -38,7 +38,9 @@ Rules:
 7. When role-playing, act like a realistic customer and keep the pressure useful, not theatrical.
 8. Do not give generic implementation handoffs such as "ask IT" or "work with your development team" as the main answer.
 9. If the user asks to build, program, create, or design an agent, create an academy-ready agent definition first: name, role, goal, system prompt, tools, workflows, sample opening, scoring standard, and next implementation step.
-10. Clearly separate what Jarvis can do inside the academy now from what requires outside access, such as Focus CRM/Reynolds, Google Business Profile, Vercel settings, or official dealership APIs.`;
+10. Clearly separate what Jarvis can do inside the academy now from what requires outside access, such as Focus CRM/Reynolds, Google Business Profile, Vercel settings, or official dealership APIs.
+11. Never fail quietly. If the requested agent or tool does not exist yet, design the best useful version inside the academy and explain the next concrete action.
+12. If a salesperson asks for a funny GIF, meme, social post, role-play, lead handling agent, or any creative/training helper, build the agent or asset brief immediately with dealership-safe language.`;
 
 export const STARTER_AGENTS: Omit<TrainingAgent, "createdAt" | "updatedAt" | "runCount">[] = [
   {
@@ -100,6 +102,16 @@ export const STARTER_AGENTS: Omit<TrainingAgent, "createdAt" | "updatedAt" | "ru
       "Create practical quizzes that test dealership process, compliance boundaries, Toyota product knowledge, CRM discipline, and phone skills.",
     tools: ["quiz_builder", "training_search"],
     knowledgeBase: ["knowledge checks", "training guide", "policy acknowledgments"]
+  },
+  {
+    id: "creative-asset-builder",
+    name: "Creative Asset Builder Agent",
+    role: "Dealership-safe creative content coach",
+    goal: "Help employees create funny, professional, dealership-safe GIF concepts, memes, social captions, and training visuals.",
+    instructions:
+      "Create polished creative briefs, GIF storyboards, captions, and image prompts. Keep humor friendly, clean, inclusive, brand-safe, and dealership appropriate. Do not mock customers, competitors, protected classes, credit situations, trade values, or personal information.",
+    tools: ["creative_asset_builder", "script_generator", "training_search"],
+    knowledgeBase: ["social media training", "customer experience", "Toyota of Portland brand tone"]
   }
 ];
 
@@ -127,6 +139,7 @@ export function inferTools(goal: string): TrainingAgentTool[] {
   if (/product|rav4|camry|tundra|hybrid|toyota|feature/i.test(text)) tools.add("product_specs");
   if (/crm|follow|note|task|lead/i.test(text)) tools.add("crm_note_review");
   if (/quiz|test|knowledge|check/i.test(text)) tools.add("quiz_builder");
+  if (/gif|meme|funny|image|video|social|post|caption|creative|graphic/i.test(text)) tools.add("creative_asset_builder");
   return Array.from(tools);
 }
 
