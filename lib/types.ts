@@ -5,7 +5,8 @@ export type TrainingAgentTool =
   | "objection_bank"
   | "product_specs"
   | "crm_note_review"
-  | "quiz_builder";
+  | "quiz_builder"
+  | "creative_asset_builder";
 
 export type TrainingAgent = {
   id: string;
