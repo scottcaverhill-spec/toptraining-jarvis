@@ -111,13 +111,15 @@ ${localToolContext || "No local tool context was needed for this request."}`
   } catch (error) {
     const message = error instanceof Error ? error.message : "OpenAI request failed.";
     console.error("Jarvis OpenAI request failed:", message);
-    return NextResponse.json(
-      {
-        error: "Jarvis could not complete the OpenAI request.",
-        detail: message
-      },
-      { status: 502 }
-    );
+    if (localToolContext) {
+      return NextResponse.json({
+        reply: `${localToolContext}\n\nNote: OpenAI was temporarily unavailable, so I used the built-in training tools for this response.`
+      });
+    }
+    return NextResponse.json({
+      reply:
+        "Jarvis is online, but the OpenAI service did not answer cleanly on that request. Here is the useful training move: keep the answer customer-centered, ask one clarifying question, avoid promises on credit/payment/trade/availability, and set a clear next step. Try a shorter prompt or ask me to role-play one specific objection."
+    });
   } finally {
     clearTimeout(timeout);
   }
