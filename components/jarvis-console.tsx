@@ -71,6 +71,7 @@ export default function JarvisConsole() {
   const [agentGoal, setAgentGoal] = useState("");
   const [agentName, setAgentName] = useState("");
   const [lastError, setLastError] = useState("");
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const messagesRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -88,6 +89,11 @@ export default function JarvisConsole() {
       } catch {}
     }
     setActiveAgentId(localStorage.getItem(ACTIVE_AGENT_KEY) || "");
+    setVoiceEnabled(localStorage.getItem("toptraining-jarvis-voice-enabled-v1") !== "false");
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
     void refreshAgents();
   }, []);
 
@@ -99,6 +105,10 @@ export default function JarvisConsole() {
   useEffect(() => {
     localStorage.setItem(ACTIVE_AGENT_KEY, activeAgentId);
   }, [activeAgentId]);
+
+  useEffect(() => {
+    localStorage.setItem("toptraining-jarvis-voice-enabled-v1", String(voiceEnabled));
+  }, [voiceEnabled]);
 
   async function refreshAgents() {
     try {
@@ -139,7 +149,9 @@ export default function JarvisConsole() {
 
       if (contentType.includes("application/json")) {
         const data = await response.json();
-        updateAssistantMessage(assistantId, data.reply || "Jarvis received an empty reply.");
+        const reply = data.reply || "Jarvis received an empty reply.";
+        updateAssistantMessage(assistantId, reply);
+        speakText(reply, voiceEnabled);
       } else {
         await readStream(response, assistantId);
       }
@@ -218,8 +230,18 @@ export default function JarvisConsole() {
     if (!("speechSynthesis" in window)) return;
     const last = [...messages].reverse().find((message) => message.role === "assistant");
     if (!last?.content) return;
+    speakText(last.content, true);
+  }
+
+  function speakText(text: string, force = false) {
+    if (!force || !("speechSynthesis" in window) || !text.trim()) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(last.content);
+    const cleanText = text
+      .replace(/[⚠*#_`>]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 900);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     const voices = window.speechSynthesis.getVoices();
     utterance.voice =
       voices.find((voice) => /british|uk|daniel|george|arthur/i.test(`${voice.name} ${voice.lang}`)) ||
@@ -228,7 +250,7 @@ export default function JarvisConsole() {
       null;
     utterance.rate = 0.96;
     utterance.pitch = 0.82;
-    window.speechSynthesis.speak(utterance);
+    setTimeout(() => window.speechSynthesis.speak(utterance), 80);
   }
 
   function toggleListening(wakeMode = false) {
@@ -343,6 +365,9 @@ export default function JarvisConsole() {
               </Button>
               <Button variant="ghost" onClick={speakLast}>
                 <Volume2 size={18} /> Speak Last Reply
+              </Button>
+              <Button variant={voiceEnabled ? "cyan" : "outline"} onClick={() => setVoiceEnabled((value) => !value)}>
+                <Volume2 size={18} /> Voice Output {voiceEnabled ? "On" : "Off"}
               </Button>
             </CardContent>
           </Card>
