@@ -1,0 +1,15 @@
+# GoDaddy/cPanel Node apps are normally routed by Passenger from "Setup Node.js App".
+# Put this inside the app root only if GoDaddy support tells you Apache rewrites are needed.
+
+PassengerAppRoot /home/oj9hhoc7ioe3/toptraining-jarvis-next-20260522
+PassengerBaseURI /jarvis
+PassengerNodejs /home/oj9hhoc7ioe3/nodevenv/toptraining-jarvis-next-20260522/20/bin/node
+PassengerAppType node
+PassengerStartupFile server.js
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /jarvis
+  RewriteRule ^$ server.js [L]
+  RewriteRule ^(.*)$ server.js [L]
+</IfModule>
