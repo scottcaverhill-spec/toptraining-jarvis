@@ -99,7 +99,7 @@ Local training tool context:
 ${localToolContext || "No local tool context was needed for this request."}`
         },
         ...normalizeMessages(messages)
-      ]
+      ] as any
     });
 
     return NextResponse.json({ reply: response.output_text || "Jarvis did not return text for that request." });
