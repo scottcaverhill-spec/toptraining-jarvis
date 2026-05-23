@@ -101,6 +101,14 @@ export default function JarvisConsole() {
   );
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("fresh") || params.has("reset") || params.has("new")) {
+      localStorage.removeItem(STORAGE_KEY);
+      setMessages([welcome]);
+      void refreshAgents();
+      return;
+    }
+
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -361,15 +369,6 @@ export default function JarvisConsole() {
     setMessages([welcome]);
   }
 
-  function clearResponses() {
-    window.speechSynthesis?.cancel();
-    setLastError("");
-    setMessages((current) => {
-      const userMessages = current.filter((message) => message.role === "user");
-      return userMessages.length ? [welcome, ...userMessages] : [welcome];
-    });
-  }
-
   return (
     <main className="relative min-h-screen px-4 py-4 text-slate-100 sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-[1600px] gap-4 xl:grid-cols-[330px_1fr_360px]">
@@ -437,10 +436,7 @@ export default function JarvisConsole() {
                 <div className={`orb absolute inset-0 rounded-full shadow-hud ${isListening || isSending ? "animate-pulse" : ""}`} />
               </div>
               <Button variant="outline" size="sm" onClick={clearChat}>
-                <Trash2 size={16} /> Clear Chat
-              </Button>
-              <Button variant="ghost" size="sm" onClick={clearResponses}>
-                <Trash2 size={16} /> Clear Responses
+                <Trash2 size={16} /> Reset Conversation
               </Button>
             </div>
           </div>
@@ -486,10 +482,7 @@ export default function JarvisConsole() {
             <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
               <span>Enter sends. Shift + Enter adds a line. Cmd/Ctrl + K focuses input.</span>
               <button className="font-bold text-slate-300 underline-offset-4 hover:text-toyota-cyan hover:underline" onClick={clearChat}>
-                Clear Chat
-              </button>
-              <button className="font-bold text-slate-300 underline-offset-4 hover:text-toyota-cyan hover:underline" onClick={clearResponses}>
-                Clear Responses
+                Reset Conversation
               </button>
               <span>Conversation stored in this browser.</span>
             </div>
@@ -561,8 +554,7 @@ export default function JarvisConsole() {
             </CardHeader>
             <CardContent className="grid gap-2">
               <Button variant="outline" onClick={exportConversation}><Download size={17} /> Export Conversation</Button>
-              <Button variant="outline" onClick={clearResponses}><Trash2 size={17} /> Clear Responses</Button>
-              <Button variant="danger" onClick={clearChat}><Trash2 size={17} /> Clear Chat</Button>
+              <Button variant="danger" onClick={clearChat}><Trash2 size={17} /> Reset Conversation</Button>
             </CardContent>
           </Card>
         </aside>
