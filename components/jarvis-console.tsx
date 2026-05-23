@@ -287,7 +287,14 @@ export default function JarvisConsole() {
   }
 
   function clearChat() {
-    if (!confirm("Clear this browser's Jarvis conversation history?")) return;
+    window.speechSynthesis?.cancel();
+    recognitionRef.current?.stop?.();
+    recognitionRef.current = null;
+    localStorage.removeItem(STORAGE_KEY);
+    setInput("");
+    setLastError("");
+    setIsSending(false);
+    setIsListening(false);
     setMessages([welcome]);
   }
 
