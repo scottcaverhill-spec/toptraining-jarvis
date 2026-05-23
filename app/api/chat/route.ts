@@ -5,6 +5,7 @@ import { agentSystemPrompt, buildAgentInstructions, DEFAULT_MODEL } from "@/lib/
 import { fastTrainingAnswer, findQuickAnswer, generateSalesScript, roleplayStarter, searchTrainingMaterials } from "@/lib/training-tools";
 import type { CoreMessage } from "ai";
 import type { TrainingAgent } from "@/lib/types";
+import { createMastraAgentFromConfig, mastra } from "@/src/mastra";
 
 export const maxDuration = 60;
 const REQUEST_TIMEOUT_MS = 12000;
@@ -20,6 +21,18 @@ function normalizeMessages(messages: CoreMessage[]) {
       };
     })
     .filter((message) => message.content.trim());
+}
+
+function latestPrompt(messages: CoreMessage[]) {
+  return normalizeMessages(messages).at(-1)?.content || "";
+}
+
+async function runMastraAgent(prompt: string, activeAgent: TrainingAgent | null) {
+  const agent = activeAgent
+    ? createMastraAgentFromConfig(activeAgent)
+    : mastra.getAgentById("jarvis-supervisor");
+  const response = await agent.generate(prompt);
+  return response.text || "";
 }
 
 type LocalToolResult = {
@@ -214,7 +227,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "OPENAI_API_KEY is not configured on the server." }, { status: 500 });
   }
 
-  const latest = normalizeMessages(messages).at(-1)?.content || "";
+  const latest = latestPrompt(messages);
   const localToolContext = await maybeHandleLocalToolRequest(latest);
   if (localToolContext?.reply) {
     return NextResponse.json({
@@ -228,6 +241,11 @@ export async function POST(request: Request) {
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
+    if (activeAgent || process.env.USE_MASTRA_SUPERVISOR === "true") {
+      const reply = await runMastraAgent(latest, activeAgent);
+      if (reply) return NextResponse.json({ reply });
+    }
+
     const response = await client.responses.create({
       model: DEFAULT_MODEL,
       input: [
