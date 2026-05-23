@@ -4,6 +4,7 @@ import { createAgent, getAgent, listAgents } from "@/lib/agent-store";
 import { agentSystemPrompt, buildAgentInstructions, DEFAULT_MODEL } from "@/lib/jarvis";
 import { generateSalesScript, roleplayStarter, searchTrainingMaterials } from "@/lib/training-tools";
 import type { CoreMessage } from "ai";
+import type { TrainingAgent } from "@/lib/types";
 
 export const maxDuration = 60;
 const REQUEST_TIMEOUT_MS = 25000;
@@ -24,6 +25,7 @@ function normalizeMessages(messages: CoreMessage[]) {
 type LocalToolResult = {
   reply: string;
   createdAgentId?: string;
+  createdAgent?: TrainingAgent;
 };
 
 async function maybeHandleLocalToolRequest(latest: string): Promise<LocalToolResult | null> {
@@ -40,14 +42,14 @@ async function maybeHandleLocalToolRequest(latest: string): Promise<LocalToolRes
   const createMatch = latest.match(/create (?:an? )?(?:specialized )?(?:ai )?agent (?:for|to|that)\s+(.+)/i);
   if (createMatch?.[1]) {
     const agent = await createAgent({ goal: createMatch[1].trim() });
-    return { reply: formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions), createdAgentId: agent.id };
+    return { reply: formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions), createdAgentId: agent.id, createdAgent: agent };
   }
 
   const buildMatch = latest.match(/(?:build|program|design|make|set up|outline) (?:an? )?(?:specialized )?(?:ai )?agent (?:for|to|that)?\s*(.+)?/i);
   if (buildMatch) {
     const goal = (buildMatch[1] || "a Toyota of Portland sales training task").trim();
     const agent = await createAgent({ goal });
-    return { reply: formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions), createdAgentId: agent.id };
+    return { reply: formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions), createdAgentId: agent.id, createdAgent: agent };
   }
 
   if (/gif|meme|funny|image|social post|caption|creative|graphic/i.test(latest)) {
@@ -61,6 +63,7 @@ async function maybeHandleLocalToolRequest(latest: string): Promise<LocalToolRes
     });
     return {
       createdAgentId: agent.id,
+      createdAgent: agent,
       reply: `${formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions)}
 
 Funny GIF asset brief:
@@ -84,7 +87,7 @@ Prompt for a future image/GIF tool:
       .replace(/^an?\s+agent\s+(for|to|that)\s+/i, "")
       .trim() || "a Toyota of Portland training task";
     const agent = await createAgent({ goal });
-    return { reply: formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions), createdAgentId: agent.id };
+    return { reply: formatAgentBuild(agent.name, agent.role, agent.goal, agent.instructions), createdAgentId: agent.id, createdAgent: agent };
   }
 
   if (/role.?play|roleplay|pretend.*customer/i.test(latest)) {
@@ -105,6 +108,26 @@ Prompt for a future image/GIF tool:
   }
 
   return null;
+}
+
+function normalizeClientAgent(value: unknown): TrainingAgent | null {
+  if (!value || typeof value !== "object") return null;
+  const agent = value as Partial<TrainingAgent>;
+  if (!agent.id || !agent.name || !agent.goal || !agent.instructions) return null;
+  return {
+    id: String(agent.id),
+    name: String(agent.name),
+    role: String(agent.role || "Specialized Toyota of Portland training coach"),
+    goal: String(agent.goal),
+    instructions: String(agent.instructions),
+    tools: Array.isArray(agent.tools) ? agent.tools : ["training_search"],
+    knowledgeBase: Array.isArray(agent.knowledgeBase) ? agent.knowledgeBase.map(String) : ["Toyota of Portland Training Academy"],
+    assistantId: agent.assistantId ? String(agent.assistantId) : undefined,
+    createdAt: String(agent.createdAt || new Date().toISOString()),
+    updatedAt: String(agent.updatedAt || new Date().toISOString()),
+    lastRunAt: agent.lastRunAt ? String(agent.lastRunAt) : undefined,
+    runCount: Number(agent.runCount || 0)
+  };
 }
 
 function formatAgentBuild(name: string, role: string, goal: string, instructions: string) {
@@ -153,7 +176,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const messages: CoreMessage[] = Array.isArray(body?.messages) ? body.messages : [];
   const activeAgentId = body?.activeAgentId ? String(body.activeAgentId) : undefined;
-  const activeAgent = await getAgent(activeAgentId);
+  const activeAgent = (await getAgent(activeAgentId)) || normalizeClientAgent(body?.activeAgent);
 
   if (!messages.length) {
     return NextResponse.json({ error: "At least one message is required." }, { status: 400 });
@@ -182,7 +205,8 @@ export async function POST(request: Request) {
   if (localToolContext?.reply.startsWith("Built inside the academy:")) {
     return NextResponse.json({
       reply: localToolContext.reply,
-      createdAgentId: localToolContext.createdAgentId
+      createdAgentId: localToolContext.createdAgentId,
+      createdAgent: localToolContext.createdAgent
     });
   }
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -213,7 +237,8 @@ ${localToolContext?.reply || "No local tool context was needed for this request.
     if (localToolContext?.reply) {
       return NextResponse.json({
         reply: `${localToolContext.reply}\n\nNote: OpenAI was temporarily unavailable, so I used the built-in training tools for this response.`,
-        createdAgentId: localToolContext.createdAgentId
+        createdAgentId: localToolContext.createdAgentId,
+        createdAgent: localToolContext.createdAgent
       });
     }
     return NextResponse.json({
