@@ -1,6 +1,6 @@
 import type { TrainingAgent, TrainingAgentTool } from "./types";
 
-export const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+export const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-5-mini";
 
 export const JARVIS_SYSTEM_PROMPT = `You are Jarvis, the advanced AI system for Top Training Academy.
 
