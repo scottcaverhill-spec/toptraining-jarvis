@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
   poweredByHeader: false,
   compress: true,
+  serverExternalPackages: ["@mastra/core", "@mastra/memory", "@mastra/libsql", "@mastra/loggers"],
   images: {
     unoptimized: true
   }

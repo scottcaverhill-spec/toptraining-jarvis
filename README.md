@@ -5,12 +5,25 @@ Jarvis is a Next.js 15 AI assistant for Toyota of Portland Training Academy. It 
 ## What It Does
 
 - Streams live AI responses with the Vercel AI SDK.
+- Uses Mastra for the Jarvis Supervisor Agent, dynamic specialist agents, tools, and memory.
 - Uses OpenAI through server-side API routes. The API key is never exposed to the browser.
 - Lets Jarvis create specialized agents such as Objection Handler, Product Expert, Role-Play Simulator, Script Generator, CRM Follow-Up Coach, and Quiz Creator.
 - Stores agent configurations and conversation history for local development.
 - Provides a `/jarvis` page designed as a dark Jarvis-style HUD.
 - Includes tool/function calls for creating, listing, deleting, switching, and running agents.
 - Supports browser speech-to-text, text-to-speech, and optional “Hey Jarvis” wake listening.
+
+## Mastra Agent System
+
+Jarvis includes a Mastra layer under `src/mastra/`:
+
+- `src/mastra/index.ts` registers the Jarvis Supervisor Agent with Mastra.
+- `src/mastra/agents/jarvis-supervisor.ts` defines the primary supervisor.
+- `src/mastra/agents/factory.ts` creates dynamic specialist agents from saved configs.
+- `src/mastra/tools/training-tools.ts` exposes academy search, script generation, role-play, objection, CRM note review, and creative asset tools.
+- `src/mastra/workflows/agent-creation.ts` provides the starter creation workflow schema.
+
+Created agents are saved through `lib/agent-store.ts`. If Postgres env vars are available, the app creates `jarvis_agents` and `jarvis_agent_runs` tables automatically. Without Postgres, it falls back to local JSON/browser storage so testing does not break.
 
 ## Important Deployment Note
 
@@ -92,12 +105,17 @@ OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-5.4-mini
 TOP_ACADEMY_CHAT_API=https://toptrainingacademy.com/api/chat
 AGENT_STORE_PATH=./data/agents.json
+POSTGRES_URL=
+POSTGRES_DATABASE_URL=
+AGENT_DATABASE_URL=
+MASTRA_LIBSQL_URL=
+USE_MASTRA_SUPERVISOR=false
 OPENAI_CREATE_ASSISTANTS=false
 ```
 
 ## Production Data
 
-The included JSON agent store is good for local development and testing. For production, replace `lib/agent-store.ts` with Supabase, Vercel Postgres, Neon, or another persistent database.
+The included JSON/browser fallback is good for local development and testing. For production, add Vercel Postgres, Neon, Supabase Postgres, or another Postgres-compatible database and set `POSTGRES_URL`, `POSTGRES_DATABASE_URL`, or `AGENT_DATABASE_URL`.
 
 ## Future RAG Upgrade
 
