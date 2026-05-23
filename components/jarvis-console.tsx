@@ -382,8 +382,13 @@ export default function JarvisConsole() {
                 Active agent: <span className="font-bold text-toyota-cyan">{activeAgent?.name || "Jarvis Core"}</span>
               </p>
             </div>
-            <div className="relative mx-auto h-32 w-32 sm:h-40 sm:w-40">
-              <div className={`orb absolute inset-0 rounded-full shadow-hud ${isListening || isSending ? "animate-pulse" : ""}`} />
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative mx-auto h-32 w-32 sm:h-40 sm:w-40">
+                <div className={`orb absolute inset-0 rounded-full shadow-hud ${isListening || isSending ? "animate-pulse" : ""}`} />
+              </div>
+              <Button variant="outline" size="sm" onClick={clearChat}>
+                <Trash2 size={16} /> Clear Chat
+              </Button>
             </div>
           </div>
 
@@ -427,6 +432,9 @@ export default function JarvisConsole() {
             </div>
             <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
               <span>Enter sends. Shift + Enter adds a line. Cmd/Ctrl + K focuses input.</span>
+              <button className="font-bold text-slate-300 underline-offset-4 hover:text-toyota-cyan hover:underline" onClick={clearChat}>
+                Clear Chat
+              </button>
               <span>Conversation stored in this browser.</span>
             </div>
           </div>
