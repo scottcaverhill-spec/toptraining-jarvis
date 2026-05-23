@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createAgent, getAgent, listAgents } from "@/lib/agent-store";
 import { agentSystemPrompt, buildAgentInstructions, DEFAULT_MODEL } from "@/lib/jarvis";
-import { fastTrainingAnswer, generateSalesScript, roleplayStarter, searchTrainingMaterials } from "@/lib/training-tools";
+import { fastTrainingAnswer, findQuickAnswer, generateSalesScript, roleplayStarter, searchTrainingMaterials } from "@/lib/training-tools";
 import type { CoreMessage } from "ai";
 import type { TrainingAgent } from "@/lib/types";
 
@@ -94,6 +94,11 @@ Prompt for a future image/GIF tool:
     const scenario = latest.replace(/start|role.?play|roleplay|with|customer/gi, " ").trim() || "common showroom objection";
     const roleplay = roleplayStarter(scenario);
     return { reply: `Scenario: ${roleplay.scenario}\nCustomer: "${roleplay.customerLine}"\nCoach target: ${roleplay.coachingTarget}` };
+  }
+
+  if (/^(what|how|when|why|where|who|can|should|do|does|is|are)\b/i.test(latest) || latest.trim().endsWith("?")) {
+    const answer = findQuickAnswer(latest);
+    if (answer) return { reply: answer };
   }
 
   if (/script|voicemail|text message|email/i.test(latest)) {
