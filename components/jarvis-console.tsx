@@ -362,11 +362,13 @@ export default function JarvisConsole() {
     recognitionRef.current?.stop?.();
     recognitionRef.current = null;
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem("toptraining-jarvis-chat-v1");
     setInput("");
     setLastError("");
     setIsSending(false);
     setIsListening(false);
     setMessages([welcome]);
+    messagesRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
@@ -377,8 +379,8 @@ export default function JarvisConsole() {
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
                 <Badge>Jarvis Online</Badge>
-                <a href="/" className="inline-flex items-center gap-1 text-sm font-bold text-slate-300 hover:text-toyota-cyan">
-                  <ChevronLeft size={16} /> Academy
+                <a href="https://toptrainingacademy.com/" className="inline-flex items-center gap-1 text-sm font-bold text-slate-300 hover:text-toyota-cyan">
+                  <ChevronLeft size={16} /> TOP Training Academy
                 </a>
               </div>
               <CardTitle className="text-3xl">TOP Jarvis</CardTitle>
@@ -433,7 +435,7 @@ export default function JarvisConsole() {
             </div>
             <div className="flex flex-col items-center gap-3">
               <Button variant="danger" size="sm" onClick={clearChat}>
-                <Trash2 size={16} /> Reset Conversation
+                <Trash2 size={16} /> Clear Jarvis
               </Button>
               <div className="relative mx-auto h-32 w-32 sm:h-40 sm:w-40">
                 <div className={`orb absolute inset-0 rounded-full shadow-hud ${isListening || isSending ? "animate-pulse" : ""}`} />
@@ -482,7 +484,7 @@ export default function JarvisConsole() {
             <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
               <span>Enter sends. Shift + Enter adds a line. Cmd/Ctrl + K focuses input.</span>
               <button className="font-bold text-slate-300 underline-offset-4 hover:text-toyota-cyan hover:underline" onClick={clearChat}>
-                Reset Conversation
+                Clear Jarvis
               </button>
               <span>Conversation stored in this browser.</span>
             </div>
@@ -554,7 +556,7 @@ export default function JarvisConsole() {
             </CardHeader>
             <CardContent className="grid gap-2">
               <Button variant="outline" onClick={exportConversation}><Download size={17} /> Export Conversation</Button>
-              <Button variant="danger" onClick={clearChat}><Trash2 size={17} /> Reset Conversation</Button>
+              <Button variant="danger" onClick={clearChat}><Trash2 size={17} /> Clear Jarvis</Button>
             </CardContent>
           </Card>
         </aside>
